@@ -138,7 +138,11 @@ class Transpose(TensorOp):
             self.axes = (-1, -2)
 
     def compute(self, a):
-        return array_api.swapaxes(a, self.axes[0], self.axes[1])
+        new_axes = list(range(len(a.shape)))
+        tmp = new_axes[self.axes[0]]
+        new_axes[self.axes[0]] = new_axes[self.axes[1]]
+        new_axes[self.axes[1]] = tmp
+        return a.permute(new_axes)
 
     def gradient(self, out_grad, node):
         return (transpose(out_grad, axes=self.axes),)
@@ -282,7 +286,7 @@ class Tanh(TensorOp):
         return array_api.tanh(a)
 
     def gradient(self, out_grad, node):
-        return (out_grad * (1 - node * node),)
+        return (out_grad * (-(node * node) + 1),)
 
 
 def tanh(a):

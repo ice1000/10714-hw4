@@ -356,7 +356,7 @@ class Tensor(Value):
         return needle.ops.Reshape(shape)(self)
 
     def __neg__(self):
-        return needle.ops.Negate()(self)
+        return needle.ops.negate(self)
 
     def transpose(self, axes=None):
         return needle.ops.Transpose(axes)(self)
