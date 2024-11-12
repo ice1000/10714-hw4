@@ -330,7 +330,7 @@ class Tensor(Value):
 
     def __sub__(self, other) -> "Tensor":
         if isinstance(other, Tensor):
-            return needle.ops.EWiseAdd()(self, needle.ops.Negate()(other))
+            return needle.ops.EWiseAdd()(self, needle.ops.negate(other))
         else:
             return needle.ops.AddScalar(-other)(self)
 
