@@ -52,7 +52,7 @@ class LogSumExp(TensorOp):
     def gradient(self, out_grad, node):
         Z: Tensor = node.inputs[0]
         shape_prebroadcast = shape_before_broadcast(self.axes, Z.shape)
-        preexp = exp(Z - reshape(node, shape_prebroadcast))
+        preexp = exp(Z - reshape(node, shape_prebroadcast).broadcast_to(Z.shape))
         return (reshape(out_grad, shape_prebroadcast).broadcast_to(Z.shape) * preexp,)
 
 
