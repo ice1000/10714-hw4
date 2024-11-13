@@ -314,6 +314,27 @@ DefineScalarUnaryOp(Tanh, tanh)
 // Elementwise and scalar operations
 ////////////////////////////////////////////////////////////////////////////////
 
+__global__ void MatmulKernel(const scalar_t* a, const scalar_t* b, scalar_t* out, uint32_t M, uint32_t N,
+                             uint32_t P) {
+  /**
+   * Kernel to multiply two (compact) matrices into an output (also comapct) matrix.  You will want
+   * to look at the lecture and notes on GPU-based linear algebra to see how to do this.  Since
+   * ultimately mugrade is just evaluating correctness, you _can_ implement a version that simply
+   * parallelizes over (i,j) entries in the output array.  However, to really get the full benefit
+   * of this problem, we would encourage you to use cooperative fetching, shared memory register
+   * tiling, and other ideas covered in the class notes.
+   */
+  size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid < M * P) {
+    size_t i = gid / P;
+    size_t j = gid % P;
+    scalar_t sum = 0;
+    for (size_t k = 0; k < N; k++) {
+      sum += a[i * N + k] * b[k * P + j];
+    }
+    out[i * P + j] = sum;
+  }
+}
 
 void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M, uint32_t N,
             uint32_t P) {
@@ -339,9 +360,8 @@ void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M, 
    *   P: columns of b / out
    */
 
-  /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
-  /// END SOLUTION
+  CudaDims dim = CudaOneDim(out->size);
+  MatmulKernel<<<dim.grid, dim.block>>>(a.ptr, b.ptr, out->ptr, M, N, P);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -474,7 +494,7 @@ PYBIND11_MODULE(ndarray_backend_cuda, m) {
   m.def("ewise_exp", EwiseExp);
   m.def("ewise_tanh", EwiseTanh);
 
-  // m.def("matmul", Matmul);
+  m.def("matmul", Matmul);
 
   m.def("reduce_max", ReduceMax);
   m.def("reduce_sum", ReduceSum);

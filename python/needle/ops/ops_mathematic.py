@@ -7,6 +7,7 @@ from ..autograd import NDArray
 from ..autograd import Op, Tensor, Value, TensorOp
 from ..autograd import TensorTuple, TensorTupleOp
 import numpy
+from functools import reduce
 
 from.. init import ones
 
@@ -192,6 +193,8 @@ def shape_before_broadcast(axes, input_shape):
         shape_prebroadcast = [1] * len(input_shape)
     else:
         shape_prebroadcast = list(input_shape)
+        if isinstance(axes, int):
+            axes = (axes,)
         for axis in axes:
             shape_prebroadcast[axis] = 1
     return shape_prebroadcast
@@ -304,14 +307,16 @@ class Stack(TensorOp):
         self.axis = axis
 
     def compute(self, args: TensorTuple) -> Tensor:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        # def at(i):
+        #     arr = [0] * len(args)
+        #     arr[i] = 1
+        #     return NDArray(arr, device=args[0].device)
+        # return reduce(lambda a, b: a + b, [x.reshape(x.shape + (1,)) @ at(i) for i, x in enumerate(args)])
+        # the above implementation requires matmul to work for batched tensors
+        return NDArray(numpy.stack([x.numpy() for x in args], axis=self.axis))
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return (split(out_grad, axis=self.axis),)
 
 
 def stack(args, axis):
@@ -329,14 +334,12 @@ class Split(TensorTupleOp):
         self.axis = axis
 
     def compute(self, A):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        def removeAt(shape):
+            return shape[:self.axis] + shape[self.axis + 1:]
+        return tuple(NDArray(x, device=A.device).reshape(removeAt(x.shape)) for x in numpy.split(A.numpy(), A.shape[self.axis], axis=self.axis))
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return stack(out_grad, axis=self.axis)
 
 
 def split(a, axis):
