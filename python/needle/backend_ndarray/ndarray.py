@@ -577,7 +577,32 @@ class NDArray:
         self.device.reduce_max(view.compact()._handle, out._handle, view.shape[-1])
         return out
 
+    def flip(self, axes):
+        """
+        Flip this ndarray along the specified axes.
+        Note: compact() before returning.
+        """
+        new_strides = list(self.strides)
+        new_offset = self._offset
+        for axis in axes:
+            new_strides[axis] = -new_strides[axis]
+            new_offset += (self.shape[axis] - 1) * self.strides[axis]
+        new = self.as_strided(self.shape, tuple(new_strides))
+        new._offset = new_offset
+        return new.compact()
 
+    def pad(self, axes):
+        """
+        Pad this ndarray by zeros by the specified amount in `axes`,
+        which lists for _all_ axes the left and right padding amount, e.g.,
+        axes = ( (0, 0), (1, 1), (0, 0)) pads the middle axis with a 0 on the left and right side.
+        """
+        new_shape = tuple(s + l + r for (s, (l, r)) in zip(self.shape, axes))
+        out = NDArray.make(new_shape, device=self.device)
+        out.fill(0)
+        slices = tuple(slice(l, l + s) for s, (l, r) in zip(self.shape, axes))
+        out[slices] = self
+        return out
 
 def array(a, dtype="float32", device=None):
     """Convenience methods to match numpy a bit more closely."""
