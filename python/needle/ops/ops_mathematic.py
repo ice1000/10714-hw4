@@ -158,7 +158,7 @@ class Reshape(TensorOp):
         self.shape = shape
 
     def compute(self, a):
-        return a.reshape(self.shape)
+        return a.compact().reshape(self.shape)
 
     def gradient(self, out_grad, node):
         return (reshape(out_grad, node.inputs[0].shape),)

@@ -124,8 +124,8 @@ class Sequential(Module):
 
 class SoftmaxLoss(Module):
     def forward(self, logits: Tensor, y: Tensor):
-        summed = ops.summation(init.one_hot(logits.shape[1], y) * logits, axes=(1,))
-        return ops.mean1d(ops.logsumexp(logits, axes=(1,)) - summed)
+        summed = ops.summation(init.one_hot(logits.shape[1], y) * logits, axes=1)
+        return ops.mean1d(ops.logsumexp(logits, axes=1) - summed)
 
 class BatchNorm1d(Module):
     def __init__(self, dim, eps=1e-5, momentum=0.1, device=None, dtype="float32"):

@@ -10,14 +10,27 @@ np.random.seed(0)
 class ResNet9(ndl.nn.Module):
     def __init__(self, device=None, dtype="float32"):
         super().__init__()
-        ### BEGIN YOUR SOLUTION ###
-        raise NotImplementedError() ###
-        ### END YOUR SOLUTION
+        def ConvBN(c_in, c_out, kernel_size, stride):
+            return nn.Sequential(nn.Conv(c_in, c_out, kernel_size, stride, device=device, dtype=dtype),
+                                 nn.BatchNorm2d(c_out, device=device, dtype=dtype), nn.ReLU())
+        self.resnet9 = nn.Sequential(
+            ConvBN(3, 16, 7, 4),
+            ConvBN(16, 32, 3, 2),
+            nn.Residual(nn.Sequential(
+                ConvBN(32, 32, 3, 1), ConvBN(32, 32, 3, 1))),
+            ConvBN(32, 64, 3, 2),
+            ConvBN(64, 128, 3, 2),
+            nn.Residual(nn.Sequential(
+                ConvBN(128, 128, 3, 1), ConvBN(128, 128, 3, 1))),
+            nn.Flatten(),
+            nn.Linear(128, 128, device=device, dtype=dtype),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(128, 10, device=device, dtype=dtype)
+        )
 
     def forward(self, x):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return self.resnet9(x)
 
 
 class LanguageModel(nn.Module):
