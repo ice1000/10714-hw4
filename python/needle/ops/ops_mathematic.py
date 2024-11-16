@@ -317,7 +317,7 @@ class Stack(TensorOp):
         #     return NDArray(arr, device=args[0].device)
         # return reduce(lambda a, b: a + b, [x.reshape(x.shape + (1,)) @ at(i) for i, x in enumerate(args)])
         # the above implementation requires matmul to work for batched tensors
-        return NDArray(numpy.stack([x.numpy() for x in args], axis=self.axis))
+        return NDArray(numpy.stack([x.numpy() for x in args], axis=self.axis), device=args[0].device)
 
     def gradient(self, out_grad, node):
         return (split(out_grad, axis=self.axis),)
@@ -343,7 +343,7 @@ class Split(TensorTupleOp):
         return tuple(NDArray(x, device=A.device).reshape(removeAt(x.shape)) for x in numpy.split(A.numpy(), A.shape[self.axis], axis=self.axis))
 
     def gradient(self, out_grad, node):
-        return stack(out_grad, axis=self.axis)
+        return (stack(out_grad, axis=self.axis),)
 
 
 def split(a, axis):
