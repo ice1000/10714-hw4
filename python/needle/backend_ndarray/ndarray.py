@@ -246,7 +246,7 @@ class NDArray:
             NDArray : reshaped array; this will point to thep
         """
         if prod(self.shape) != prod(new_shape) or not self.is_compact():
-            raise ValueError("Cringe")
+            raise ValueError("Cringe: " + str(self.shape) + " -> " + str(new_shape))
         return self.as_strided(new_shape, NDArray.compact_strides(new_shape))
 
     def permute(self, new_axes):
@@ -269,7 +269,7 @@ class NDArray:
             to the same memory as the original NDArray (i.e., just shape and
             strides changed).
         """
-        assert len(new_axes) == self.ndim
+        assert len(new_axes) == self.ndim, "Want " + str(self.ndim) + " axes, got " + str(new_axes)
         new_shape = tuple([self.shape[i] for i in new_axes])
         return self.as_strided(new_shape, tuple([self.strides[i] for i in new_axes]))
 
@@ -553,7 +553,7 @@ class NDArray:
 
         else:
             if isinstance(axis, (tuple, list)):
-                assert len(axis) == 1, "Only support reduction over a single axis"
+                assert len(axis) == 1, "Only support reduction over a single axis, got: " + str(axis)
                 axis = axis[0]
 
             view = self.permute(
@@ -645,7 +645,7 @@ def tanh(a):
     return a.tanh()
 
 
-def sum(a, axis=None, keepdims=False):
+def sum(a: NDArray, axis=None, keepdims=False):
     return a.sum(axis=axis, keepdims=keepdims)
 
 

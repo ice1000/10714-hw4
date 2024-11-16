@@ -178,10 +178,9 @@ class BroadcastTo(TensorOp):
     def gradient(self, out_grad, node):
         input_shape = node.inputs[0].shape
 
-        axes = []
-        for i in range(len(self.shape)):
-            if i >= len(input_shape) or input_shape[i] == 1:
-                axes.append(i)
+        extra_len = len(out_grad.shape) - len(input_shape)
+        xs = reversed(range(len(out_grad.shape)))
+        axes = tuple([i for i in xs if (i < extra_len or out_grad.shape[i] != input_shape[i-extra_len])])
 
         return (summation(out_grad, axes=tuple(axes)),)
 
@@ -204,7 +203,12 @@ class Summation(TensorOp):
         self.axes = axes
 
     def compute(self, a):
-        return array_api.sum(a, axis=self.axes)
+        if isinstance(self.axes, (tuple, list)):
+            for i in self.axes:
+                a = a.sum(axis=i)
+            return a
+        else:
+            return a.sum(self.axes)
 
     def gradient(self, out_grad, node):
         input_shape = node.inputs[0].shape
@@ -416,15 +420,36 @@ class Conv(TensorOp):
         self.stride = stride
         self.padding = padding
 
-    def compute(self, A, B):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+    def compute(self, A: NDArray, B: NDArray):
+        if self.padding > 0:
+            A = A.pad(((0, 0), (self.padding, self.padding), (self.padding, self.padding), (0, 0)))
+
+        N, H, W, C_in  = A.shape
+        K, _, _, C_out = B.shape
+        Ns, Hs, Ws, Cs = A.strides
+
+        newH = (H - K) // self.stride + 1
+        newW = (W - K) // self.stride + 1
+
+        inside_dim = C_in * K * K
+        out = A.as_strided(shape=(N, newH, newW, K, K, C_in),
+                          strides=(Ns, Hs * self.stride,
+                                       Ws * self.stride, Hs, Ws, Cs)).compact().reshape((N * newH * newW, inside_dim))
+
+        out = out @ B.compact().reshape((K * K * C_in, C_out))
+        return out.reshape((N, newH, newW, C_out))
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        X, W = node.inputs
+        W = transpose(flip(W, (0, 1)), (2, 3))
+        if (self.stride > 1):
+            out_grad = dilate(out_grad, (1, 2), self.stride - 1)
+        x_grad = conv(out_grad, W, 1, W.shape[0] - self.padding - 1)
+        X = transpose(transpose(X, (1, 2)), (0, 3))
+        out_grad = transpose(out_grad, (0, 2))
+        w_grad = conv(X, out_grad, 1, self.padding)
+        w_grad = transpose(w_grad, (0, 2))
+        return x_grad, w_grad
 
 
 def conv(a, b, stride=1, padding=1):
