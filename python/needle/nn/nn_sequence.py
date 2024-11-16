@@ -177,9 +177,9 @@ class LSTMCell(Module):
         self.W_hh = Parameter(init.rand(
             hidden_size, 4*hidden_size, low=-bound, high=bound, device=device, dtype=dtype))
         self.bias_ih = Parameter(init.rand(
-            4*hidden_size, low=-bound, high=bound, device=device, dtype=dtype)) if bias else None
+            4 * hidden_size, low=-bound, high=bound, device=device, dtype=dtype)) if bias else None
         self.bias_hh = Parameter(init.rand(
-            4*hidden_size, low=-bound, high=bound, device=device, dtype=dtype)) if bias else None
+            4 * hidden_size, low=-bound, high=bound, device=device, dtype=dtype)) if bias else None
 
 
     def forward(self, X, h=None):
@@ -207,18 +207,15 @@ class LSTMCell(Module):
         gates = X @ self.W_ih + h0 @ self.W_hh
         if self.bias_ih:
             def prepare(x: Tensor):
-                return x.reshape((1, 4*self.hidden_size)).broadcast_to(
-                    (batch_size, 4*self.hidden_size))
+                return x.reshape((1, x.shape[0])).broadcast_to(
+                    (batch_size, 4 * self.hidden_size))
             gates = gates + prepare(self.bias_ih) + prepare(self.bias_hh)
         gates = gates.reshape((batch_size, 4, self.hidden_size))
         i, f, g, o = ops.split(gates, axis=1)
-        input_gate = sigmoid(i)
-        forget_gate = sigmoid(f)
-        g_gate = ops.tanh(g)
-        output_gate = sigmoid(o)
-        c_next = forget_gate * c0 + input_gate * g_gate
-        h_next = output_gate * ops.tanh(c_next)
-        return h_next, c_next
+        i, f, g, o = sigmoid(i), sigmoid(f), ops.tanh(g), sigmoid(o)
+        c_ = f * c0 + i * g
+        h_ = o * ops.tanh(c_)
+        return h_, c_
 
 
 class LSTM(Module):
@@ -271,27 +268,7 @@ class LSTM(Module):
             h_n of shape (num_layers, bs, hidden_size) containing the final hidden state for each element in the batch.
             h_n of shape (num_layers, bs, hidden_size) containing the final hidden cell state for each element in the batch.
         """
-        seq_len, bs, input_size = X.shape
-        if h is None:
-            h = (init.zeros(self.num_layers, bs, self.hidden_size, device=self.device, dtype=self.dtype),
-                 init.zeros(self.num_layers, bs, self.hidden_size, device=self.device, dtype=self.dtype))
-        h0, c0 = h
-        X_t = ops.split(X, axis=0)
-        h_last_time = list(ops.split(h0, axis=0))
-        c_last_time = list(ops.split(c0, axis=0))
-        h_last_layer = []
-        for t in range(seq_len):
-            first_layer_input = X_t[t]
-            last_layer_h = 0
-            for l in range(self.num_layers):
-                lstm_cells = self.lstm_cells[l]
-                hc = (h_last_time[l], c_last_time[l])
-                last_layer_h, last_layer_c = lstm_cells(first_layer_input, hc) if l == 0 else lstm_cells(last_layer_h, hc)
-                h_last_time[l] = last_layer_h
-                c_last_time[l] = last_layer_c
-            h_last_layer.append(last_layer_h)
-        return ops.stack(h_last_layer, axis=0), (ops.stack(h_last_time, axis=0), ops.stack(c_last_time, axis=0))
-
+        pass
 
 class Embedding(Module):
     def __init__(self, num_embeddings, embedding_dim, device=None, dtype="float32"):
