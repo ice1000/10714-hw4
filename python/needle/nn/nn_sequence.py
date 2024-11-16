@@ -17,6 +17,9 @@ class Sigmoid(Module):
         e = ops.exp(-x)
         return e / (e + e * e)
 
+def sigmoid(x: Tensor) -> Tensor:
+    return Sigmoid()(x)
+
 class RNNCell(Module):
     def __init__(self, input_size, hidden_size, bias=True, nonlinearity='tanh', device=None, dtype="float32"):
         """
@@ -197,9 +200,10 @@ class LSTMCell(Module):
         """
         batch_size = X.shape[0]
         if h is None:
-            h = (init.zeros(batch_size, self.hidden_size, device=self.device, dtype=self.dtype),
-                 init.zeros(batch_size, self.hidden_size, device=self.device, dtype=self.dtype))
-        h0, c0 = h
+            h0 = init.zeros(batch_size, self.hidden_size, device=self.device, dtype=self.dtype)
+            c0 = init.zeros(batch_size, self.hidden_size, device=self.device, dtype=self.dtype)
+        else:
+            h0, c0 = h
         gates = X @ self.W_ih + h0 @ self.W_hh
         if self.bias_ih:
             def prepare(x: Tensor):
@@ -208,10 +212,10 @@ class LSTMCell(Module):
             gates = gates + prepare(self.bias_ih) + prepare(self.bias_hh)
         gates = gates.reshape((batch_size, 4, self.hidden_size))
         i, f, g, o = ops.split(gates, axis=1)
-        input_gate = Sigmoid()(i)
-        forget_gate = Sigmoid()(f)
+        input_gate = sigmoid(i)
+        forget_gate = sigmoid(f)
         g_gate = ops.tanh(g)
-        output_gate = Sigmoid()(o)
+        output_gate = sigmoid(o)
         c_next = forget_gate * c0 + input_gate * g_gate
         h_next = output_gate * ops.tanh(c_next)
         return h_next, c_next
