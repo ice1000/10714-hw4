@@ -324,7 +324,9 @@ class Stack(TensorOp):
 
 
 def stack(args, axis):
-    return Stack(axis)(make_tuple(*args))
+    if isinstance(args, (tuple, list)):
+        return Stack(axis)(make_tuple(*args))
+    return Stack(axis)(make_tuple(args))
 
 
 class Split(TensorTupleOp):
@@ -340,7 +342,8 @@ class Split(TensorTupleOp):
     def compute(self, A):
         def removeAt(shape):
             return shape[:self.axis] + shape[self.axis + 1:]
-        return tuple(NDArray(x, device=A.device).reshape(removeAt(x.shape)) for x in numpy.split(A.numpy(), A.shape[self.axis], axis=self.axis))
+        return tuple(NDArray(x, device=A.device).reshape(removeAt(x.shape))
+                      for x in numpy.split(A.numpy(), A.shape[self.axis], axis=self.axis))
 
     def gradient(self, out_grad, node):
         return (stack(out_grad, axis=self.axis),)
